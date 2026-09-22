@@ -2,8 +2,65 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import authenticate, login , logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
-
 from .models import Profile, Post
+from .forms import ProfileUpdateForm, UserUpdateForm
+
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from .serializers import PostSerializers
+
+class Getview(APIView):
+    '''
+    def get(self, request):
+        posts = Post.objects.all()
+        serializer = PostSerializers(posts, many=True)
+        return Response(serializer.data)
+        '''
+
+    def get(self, request, pk=None):
+
+        if pk:
+            post = get_object_or_404(Post, pk=pk)
+            serializer = PostSerializers(post)
+            return Response(serializer.data)
+
+        posts = Post.objects.all()
+        serializer = PostSerializers(posts, many=True)
+        return Response(serializer.data)
+    
+    def post(self,request):
+        serializer = PostSerializers(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+    def put(self, request, pk):
+        post = get_object_or_404(Post, pk=pk)
+
+        serializer = PostSerializers(post, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+    def patch(self, request, pk):
+        post = get_object_or_404(Post, pk=pk)
+
+        serializer = PostSerializers(post, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors)
+
+    def delete(self, request, pk):
+        post = get_object_or_404(Post, pk=pk)
+        post.delete()
+        return Response({
+            "message": "Post deleted successfully"
+        })
+        
+
 
 
 def home(request):
@@ -24,7 +81,7 @@ def login_view(request):
             username=username,
             password=password
         )
-
+        
         if user is not None:
             login(request, user)
             return redirect("home")
@@ -33,6 +90,7 @@ def login_view(request):
 
     return render(request, "login.html")
 
+@login_required
 def profile_page(request, username):
     user = get_object_or_404(
         User,
@@ -54,6 +112,23 @@ def profile_page(request, username):
         "posts": posts,
     }
     return render(request, "profile.html", context)
+
+@login_required
+def edit_profile(request):
+    
+    if request.method == 'POST':
+        user_form = UserUpdateForm(request.POST,instance=request.user)
+        form = ProfileUpdateForm(request.POST, request.FILES, instance = request.user.profile)
+        if form.is_valid() and user_form.is_valid():
+            form.save()
+            user_form.save()
+
+            return redirect('profile', request.user)
+    else:
+        user_form = UserUpdateForm(instance=request.user)
+        form = ProfileUpdateForm(instance = request.user.profile)
+        
+    return render(request,'edit_user_profile.html', {'user_form':user_form, 'form':form})
 
 @login_required
 def create_post(request):

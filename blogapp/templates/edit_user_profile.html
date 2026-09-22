@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+Edit Profile
+{% endblock %}
+
+{% block content %}
+<h3>Edit Blog</h3>
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{user_form.as_p}}
+    {{form.as_p}}
+    <button type="submit">Update Profile</button>
+</form>
+{% endblock %}
